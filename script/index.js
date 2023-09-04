@@ -28,9 +28,6 @@ const getCardDetails = () => {
 };
 // деструктуируем объект для получения card (отображение карты)
 const {card, cardNumber, cardName, cardDate} = getCardDetails();
-console.log(cardNumber);
-console.dir(cardName);
-console.log(cardDate);
 
 /* создание формы */
 const getCardForm = () => {
@@ -92,8 +89,6 @@ const getCardForm = () => {
 
 // деструктуируем объект для получения формы
 const {form} = getCardForm();
-console.log(form);
-console.log(form.elements);
 
 // рендер в обертку всех данных карты
 setChildren(cardWrap, [el('p', {className: 'secure'}, 'Secure Checkout'),
