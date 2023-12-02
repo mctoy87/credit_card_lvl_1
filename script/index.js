@@ -1,5 +1,6 @@
-import {el, setChildren} from 'redom';
+import {el, setChildren, mount, unmount} from 'redom';
 import Cleave from '../node_modules/cleave.js/dist/cleave-esm.min.js';
+import {isValidCardHolder, isValidCardNumber, isValidCardCVC} from './validate';
 
 // обертка всего кода
 const wrapper = el('div', {className: 'wrapper'});
@@ -38,6 +39,7 @@ const getCardForm = () => {
       'Card Holder');
   const inputHolder = el('input.input input__holder', {
     type: 'text',
+    name: 'holder',
     oninput(e) {
       cardName.textContent = e.target.value;
     }});
@@ -47,6 +49,7 @@ const getCardForm = () => {
       'Card Number');
   const inputNumber = el('input.input input__number', {
     id: 'number',
+    name: 'number',
     oninput(e) {
       cardNumber.textContent = e.target.value;
     }});
@@ -67,12 +70,13 @@ const getCardForm = () => {
   const inputWrapCVV = el('.form__input-wrap form__input-wrap_cvv');
   const labelCVV = el('label.form__label form__cvv-label', {for: '#'}, 'CVV');
   const inputCVV = el('input.input input__cvv', {
+    name: 'cvc',
     // разрешаем ввод только цифр
     oninput(e) {
       e.target.value = e.target.value.replace(/\D/g, '');
     }});
 
-  const button = el('button.form__button', 'CHECK OUT');
+  const button = el('button.form__button', {name: 'formButton'}, 'CHECK OUT');
 
   setChildren(inputWrapHolder, [labelHolder, inputHolder]);
   setChildren(inputWrapNumber, [labelNumber, inputNumber]);
@@ -100,4 +104,44 @@ setChildren(wrapper, cardWrap);
 // рендер обертку в body
 setChildren(document.body, wrapper);
 
+// cоздаем кнопку валидации
+const validateButton = el(
+    'button',
+    {className: 'validate-button'},
+    'Отправить на валидацию',
+);
+mount(form, validateButton);
 
+console.log(form);
+
+// показать модалку если валидацию карточка не прошла
+const showModal = (boolean) => {
+  console.log('boolean: ', boolean);
+  
+  // создаем эл-т с текстом тестирования валидации
+  const message = el('h2');
+  // если прошел/не прошел валид то меняем текст
+  if (boolean) {
+    message.textContent = 'Введенные данные прошли валидацию!';
+  } else {
+    message.textContent = 'Введенные данные НЕ прошли валидацию!';
+  }
+  // монтируем сообщение о валидации
+  mount(form, message);
+  // показываем сообщение на 3 сек
+  const tomerId = setTimeout(() => {
+    unmount(form, message);
+  }, 3000);
+};
+// слушаем клик по кнопке валидации
+validateButton.addEventListener('click', (e) => {
+  e.preventDefault();
+  console.dir(form);
+  console.log('form.name.value: ', form);
+  // показываем сообщение в зависимости от валидации
+  showModal(
+      isValidCardHolder(form.holder.value) &&
+        isValidCardNumber(form.number.value) &&
+        isValidCardCVC(form.cvc.value)
+  );
+});

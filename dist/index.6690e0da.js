@@ -142,7 +142,7 @@
       this[globalName] = mainExports;
     }
   }
-})({"4gbls":[function(require,module,exports) {
+})({"cygyY":[function(require,module,exports) {
 var global = arguments[3];
 var HMR_HOST = null;
 var HMR_PORT = null;
@@ -227,9 +227,15 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== "undefined") {
     var hostname = getHostname();
     var port = getPort();
     var protocol = HMR_SECURE || location.protocol == "https:" && !/localhost|127.0.0.1|0.0.0.0/.test(hostname) ? "wss" : "ws";
-    var ws = new WebSocket(protocol + "://" + hostname + (port ? ":" + port : "") + "/");
+    var ws;
+    try {
+        ws = new WebSocket(protocol + "://" + hostname + (port ? ":" + port : "") + "/");
+    } catch (err) {
+        if (err.message) console.error(err.message);
+        ws = {};
+    }
     // Web extension context
-    var extCtx = typeof chrome === "undefined" ? typeof browser === "undefined" ? null : browser : chrome;
+    var extCtx = typeof browser === "undefined" ? typeof chrome === "undefined" ? null : chrome : browser;
     // Safari doesn't support sourceURL in error stacks.
     // eval may also be disabled via CSP, so do a quick check.
     var supportsSourceURL = false;
@@ -293,7 +299,7 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== "undefined") {
         }
     };
     ws.onerror = function(e) {
-        console.error(e.message);
+        if (e.message) console.error(e.message);
     };
     ws.onclose = function() {
         console.warn("[parcel] \uD83D\uDEA8 Connection to the HMR server was lost");
@@ -303,7 +309,7 @@ function removeErrorOverlay() {
     var overlay = document.getElementById(OVERLAY_ID);
     if (overlay) {
         overlay.remove();
-        console.log("[parcel] ✨ Error resolved");
+        console.log("[parcel] \u2728 Error resolved");
     }
 }
 function createErrorOverlay(diagnostics) {
@@ -319,13 +325,13 @@ ${frame.code}`;
         errorHTML += `
       <div>
         <div style="font-size: 18px; font-weight: bold; margin-top: 20px;">
-          🚨 ${diagnostic.message}
+          \u{1F6A8} ${diagnostic.message}
         </div>
         <pre>${stack}</pre>
         <div>
           ${diagnostic.hints.map((hint)=>"<div>\uD83D\uDCA1 " + hint + "</div>").join("")}
         </div>
-        ${diagnostic.documentation ? `<div>📝 <a style="color: violet" href="${diagnostic.documentation}" target="_blank">Learn more</a></div>` : ""}
+        ${diagnostic.documentation ? `<div>\u{1F4DD} <a style="color: violet" href="${diagnostic.documentation}" target="_blank">Learn more</a></div>` : ""}
       </div>
     `;
     }
@@ -421,15 +427,10 @@ async function hmrApplyUpdates(assets) {
             let promises = assets.map((asset)=>{
                 var _hmrDownload;
                 return (_hmrDownload = hmrDownload(asset)) === null || _hmrDownload === void 0 ? void 0 : _hmrDownload.catch((err)=>{
-                    // Web extension bugfix for Chromium
-                    // https://bugs.chromium.org/p/chromium/issues/detail?id=1255412#c12
-                    if (extCtx && extCtx.runtime && extCtx.runtime.getManifest().manifest_version == 3) {
-                        if (typeof ServiceWorkerGlobalScope != "undefined" && global instanceof ServiceWorkerGlobalScope) {
-                            extCtx.runtime.reload();
-                            return;
-                        }
-                        asset.url = extCtx.runtime.getURL("/__parcel_hmr_proxy__?url=" + encodeURIComponent(asset.url + "?t=" + Date.now()));
-                        return hmrDownload(asset);
+                    // Web extension fix
+                    if (extCtx && extCtx.runtime && extCtx.runtime.getManifest().manifest_version == 3 && typeof ServiceWorkerGlobalScope != "undefined" && global instanceof ServiceWorkerGlobalScope) {
+                        extCtx.runtime.reload();
+                        return;
                     }
                     throw err;
                 });
@@ -578,6 +579,7 @@ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 var _redom = require("redom");
 var _cleaveEsmMinJs = require("../node_modules/cleave.js/dist/cleave-esm.min.js");
 var _cleaveEsmMinJsDefault = parcelHelpers.interopDefault(_cleaveEsmMinJs);
+var _validate = require("./validate");
 // обертка всего кода
 const wrapper = (0, _redom.el)("div", {
     className: "wrapper"
@@ -617,9 +619,6 @@ const wrapper = (0, _redom.el)("div", {
 };
 // деструктуируем объект для получения card (отображение карты)
 const { card, cardNumber, cardName, cardDate } = getCardDetails();
-console.log(cardNumber);
-console.dir(cardName);
-console.log(cardDate);
 /* создание формы */ const getCardForm = ()=>{
     const form = (0, _redom.el)("form#form", {
         className: "form",
@@ -631,6 +630,7 @@ console.log(cardDate);
     }, "Card Holder");
     const inputHolder = (0, _redom.el)("input.input input__holder", {
         type: "text",
+        name: "holder",
         oninput (e) {
             cardName.textContent = e.target.value;
         }
@@ -641,6 +641,7 @@ console.log(cardDate);
     }, "Card Number");
     const inputNumber = (0, _redom.el)("input.input input__number", {
         id: "number",
+        name: "number",
         oninput (e) {
             cardNumber.textContent = e.target.value;
         }
@@ -664,12 +665,15 @@ console.log(cardDate);
         for: "#"
     }, "CVV");
     const inputCVV = (0, _redom.el)("input.input input__cvv", {
+        name: "cvc",
         // разрешаем ввод только цифр
         oninput (e) {
             e.target.value = e.target.value.replace(/\D/g, "");
         }
     });
-    const button = (0, _redom.el)("button.form__button", "CHECK OUT");
+    const button = (0, _redom.el)("button.form__button", {
+        name: "formButton"
+    }, "CHECK OUT");
     (0, _redom.setChildren)(inputWrapHolder, [
         labelHolder,
         inputHolder
@@ -699,8 +703,6 @@ console.log(cardDate);
 };
 // деструктуируем объект для получения формы
 const { form } = getCardForm();
-console.log(form);
-console.log(form.elements);
 // рендер в обертку всех данных карты
 (0, _redom.setChildren)(cardWrap, [
     (0, _redom.el)("p", {
@@ -713,8 +715,37 @@ console.log(form.elements);
 (0, _redom.setChildren)(wrapper, cardWrap);
 // рендер обертку в body
 (0, _redom.setChildren)(document.body, wrapper);
+// cоздаем кнопку валидации
+const validateButton = (0, _redom.el)("button", {
+    className: "validate-button"
+}, "\u041E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u043D\u0430 \u0432\u0430\u043B\u0438\u0434\u0430\u0446\u0438\u044E");
+(0, _redom.mount)(form, validateButton);
+console.log(form);
+// показать модалку если валидацию карточка не прошла
+const showModal = (boolean)=>{
+    console.log("boolean: ", boolean);
+    // создаем эл-т с текстом тестирования валидации
+    const message = (0, _redom.el)("h2");
+    // если прошел/не прошел валид то меняем текст
+    if (boolean) message.textContent = "\u0412\u0432\u0435\u0434\u0435\u043D\u043D\u044B\u0435 \u0434\u0430\u043D\u043D\u044B\u0435 \u043F\u0440\u043E\u0448\u043B\u0438 \u0432\u0430\u043B\u0438\u0434\u0430\u0446\u0438\u044E!";
+    else message.textContent = "\u0412\u0432\u0435\u0434\u0435\u043D\u043D\u044B\u0435 \u0434\u0430\u043D\u043D\u044B\u0435 \u041D\u0415 \u043F\u0440\u043E\u0448\u043B\u0438 \u0432\u0430\u043B\u0438\u0434\u0430\u0446\u0438\u044E!";
+    // монтируем сообщение о валидации
+    (0, _redom.mount)(form, message);
+    // показываем сообщение на 3 сек
+    const tomerId = setTimeout(()=>{
+        (0, _redom.unmount)(form, message);
+    }, 3000);
+};
+// слушаем клик по кнопке валидации
+validateButton.addEventListener("click", (e)=>{
+    e.preventDefault();
+    console.dir(form);
+    console.log("form.name.value: ", form);
+    // показываем сообщение в зависимости от валидации
+    showModal((0, _validate.isValidCardHolder)(form.holder.value) && (0, _validate.isValidCardNumber)(form.number.value) && (0, _validate.isValidCardCVC)(form.cvc.value));
+});
 
-},{"redom":"iahd6","@parcel/transformer-js/src/esmodule-helpers.js":"8qVmu","../node_modules/cleave.js/dist/cleave-esm.min.js":"5Q5X9"}],"iahd6":[function(require,module,exports) {
+},{"redom":"iahd6","../node_modules/cleave.js/dist/cleave-esm.min.js":"5Q5X9","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./validate":"3fapH"}],"iahd6":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "List", ()=>List);
@@ -1191,7 +1222,7 @@ svg.extend = function extendSvg() {
 };
 svg.ns = ns;
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"8qVmu"}],"8qVmu":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gkKU3":[function(require,module,exports) {
 exports.interopDefault = function(a) {
     return a && a.__esModule ? a : {
         default: a
@@ -1204,7 +1235,7 @@ exports.defineInteropFlag = function(a) {
 };
 exports.exportAll = function(source, dest) {
     Object.keys(source).forEach(function(key) {
-        if (key === "default" || key === "__esModule" || dest.hasOwnProperty(key)) return;
+        if (key === "default" || key === "__esModule" || Object.prototype.hasOwnProperty.call(dest, key)) return;
         Object.defineProperty(dest, key, {
             enumerable: true,
             get: function() {
@@ -1811,6 +1842,49 @@ m.prototype = {
 }, m.NumeralFormatter = i, m.DateFormatter = n, m.TimeFormatter = s, m.PhoneFormatter = o, m.CreditCardDetector = u, m.Util = d, m.DefaultProperties = h, ("object" == typeof e && e ? e : window).Cleave = m;
 exports.default = m;
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"8qVmu"}]},["4gbls","2OpUZ"], "2OpUZ", "parcelRequire7921")
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"3fapH":[function(require,module,exports) {
+// Валидация Card Holder
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "isValidCardHolder", ()=>isValidCardHolder);
+parcelHelpers.export(exports, "isValidCardNumber", ()=>isValidCardNumber);
+parcelHelpers.export(exports, "isValidCardCVC", ()=>isValidCardCVC);
+const isValidCardHolder = (str)=>{
+    if (str) {
+        // приводим к строке тестовые данные
+        const test = str.toString();
+        // только кириллица зате пробел затем кирилица (2 слова)
+        const regExpNumber = /^[а-яё]+\s+[а-яё]+$/gi;
+        // ищем совпадения по регулярному выражению
+        const result = regExpNumber.test(test);
+        return result;
+    } else return false;
+};
+const isValidCardNumber = (str)=>{
+    if (str) {
+        // приводим к строке тестовые данные
+        const test = str.toString();
+        // убирает пробелы в строке
+        const noProbelTest = test.replaceAll(" ", "");
+        // только 15 цифр
+        const regExpNumber = /^\d{15}$/g;
+        // ищем совпадения по регулярному выражению
+        const result = regExpNumber.test(noProbelTest);
+        return result;
+    } else return false;
+};
+const isValidCardCVC = (str)=>{
+    if (str) {
+        // приводим к строке тестовые данные
+        const test = str.toString();
+        // только 3 цифры
+        const regExpNumber = /^\d{3}$/g;
+        // ищем совпадения по регулярному выражению
+        const result = regExpNumber.test(test);
+        return result;
+    } else return false;
+};
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}]},["cygyY","2OpUZ"], "2OpUZ", "parcelRequire7921")
 
 //# sourceMappingURL=index.6690e0da.js.map
