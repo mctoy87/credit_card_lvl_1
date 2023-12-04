@@ -1,3 +1,6 @@
+import { isValidCardHolder, isValidCardNumber, isValidCardCVC } from './validate.js';
+
+/*
 // Валидация Card Holder
 const isValidCardHolder = (str) => {
   if (str) {
@@ -38,7 +41,7 @@ const isValidCardCVC = (str) => {
     return result;
   } else return false;
 };
-
+*/
 
 describe('Функция для валидации банковской карты', () => {
   const holder = [
